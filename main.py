@@ -32,12 +32,28 @@ def start():
             plan = defaultdict(list)
             for f in files: plan[get_file_metadata(f)].append(f)
             print(f"\nPlan: {len(files)} files.")
+            print("Renaming options:")
+            print(" [n] None  [c] Custom Name  [p] Prefix  [s] Suffix")
+            choice = input("Select: ").lower()
+            
+            custom = ""; prefix = ""; suffix = ""
+            if choice == "c": custom = input("Custom Name: ").strip()
+            elif choice == "p": prefix = input("Prefix: ").strip()
+            elif choice == "s": suffix = input("Suffix: ").strip()
+            
             if input("Approve? [y/n]: ").lower() == "y":
                 log = VAULT_DIR / f"audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                summary_counts = engine.process_files(plan, tgt, log)
-                print("\nTransfer Summary:")
-                for ext, c in summary_counts.items():
-                    print(f"Moved {c} {ext} files.")
+                summary_counts, details = engine.process_files(plan, tgt, log, prefix, suffix, custom)
+                
+                print("\n" + "="*40)
+                print("TRANSFER SUMMARY")
+                print("="*40)
+                for entry in details:
+                    print(entry)
+                print("-" * 40)
+                for ext, count in summary_counts.items():
+                    print(f"Moved {count} {ext} files.")
+                print("="*40)
             input("\nPress Enter...")
         elif c == "2" and guard.verify(): vault.search(VAULT_DIR); input("\nPress Enter...")
         elif c == "3" and guard.verify(): vault.undo(VAULT_DIR); input("\nPress Enter...")

@@ -20,6 +20,11 @@ def undo(vault_dir):
                 if os.path.exists(e["new"]):
                     os.makedirs(os.path.dirname(e["old"]), exist_ok=True)
                     shutil.move(e["new"], e["old"])
+        
+        # Make the log writeable to allow cleanup after successful undo
+        try: os.chmod(logs[int(c)-1], 0o666)
+        except: pass
+        
         logs[int(c)-1].unlink()
         print("Undo successful.")
     except Exception as e: print(f"Error: {e}")
