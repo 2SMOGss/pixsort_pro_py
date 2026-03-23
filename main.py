@@ -31,11 +31,13 @@ def start():
             files = [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in EXT]
             plan = defaultdict(list)
             for f in files: plan[get_file_metadata(f)].append(f)
-            print(f"\nPlan: {len(files)} files."); ren = input("Rename? [n/p/s]: ").lower()
-            pre = input("Prefix: ") if ren == "p" else ""; sfx = input("Suffix: ") if ren == "s" else ""
+            print(f"\nPlan: {len(files)} files.")
             if input("Approve? [y/n]: ").lower() == "y":
                 log = VAULT_DIR / f"audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                engine.process_files(plan, tgt, log, pre, sfx)
+                summary_counts = engine.process_files(plan, tgt, log)
+                print("\nTransfer Summary:")
+                for ext, c in summary_counts.items():
+                    print(f"Moved {c} {ext} files.")
             input("\nPress Enter...")
         elif c == "2" and guard.verify(): vault.search(VAULT_DIR); input("\nPress Enter...")
         elif c == "3" and guard.verify(): vault.undo(VAULT_DIR); input("\nPress Enter...")

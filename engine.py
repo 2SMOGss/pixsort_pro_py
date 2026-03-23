@@ -9,16 +9,20 @@ def update_bar(count, total, task):
     bar = "█" * int(30 * count // total) + "-" * (30 - int(30 * count // total))
     sys.stdout.write(f"\rProgress: |{bar}| {percent:.1f}% [{task}]")
     sys.stdout.flush()
-def process_files(plan, tgt, log_path, prefix, suffix):
+def process_files(plan, tgt, log_path):
     audit = []
     total = sum(len(v) for v in plan.values())
     count = 0
+    summary_counts = {}
     summary_txt = log_path.with_name(log_path.stem + ".log")
     with open(summary_txt, "w") as sf:
         sf.write("ag-sort Transfer Summary\n========================\n")
 
     for folder, files in plan.items():
-        dest_dir = tgt / folder
+        if tgt.name == folder:
+            dest_dir = tgt
+        else:
+            dest_dir = tgt / folder
         dest_dir.mkdir(parents=True, exist_ok=True)
         
         dest_hashes = {}
@@ -34,9 +38,9 @@ def process_files(plan, tgt, log_path, prefix, suffix):
                 if pre_h in dest_hashes:
                     dup_dir = dest_dir / "duplicates"
                     dup_dir.mkdir(exist_ok=True)
-                    target = dup_dir / f"{prefix}{f.stem}{suffix}{f.suffix}"
+                    target = dup_dir / f"{f.stem}{f.suffix}"
                 else:
-                    target = dest_dir / f"{prefix}{f.stem}{suffix}{f.suffix}"
+                    target = dest_dir / f"{f.stem}{f.suffix}"
                     
                 base_name = target.stem
                 ext = target.suffix
@@ -51,6 +55,7 @@ def process_files(plan, tgt, log_path, prefix, suffix):
                     f.unlink()
                     status = "VERIFIED"
                     dest_hashes[pre_h] = target
+                    summary_counts[f.suffix.lower()] = summary_counts.get(f.suffix.lower(), 0) + 1
                 else:
                     target.unlink()
                     status = "FAIL"
@@ -66,3 +71,4 @@ def process_files(plan, tgt, log_path, prefix, suffix):
             with open(log_path, "w") as lf: json.dump(audit, lf, indent=4)
             
     print(f"\n[COMPLETE] Summary saved to {str(summary_txt)}")
+    return summary_counts

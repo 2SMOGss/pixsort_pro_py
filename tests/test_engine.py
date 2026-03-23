@@ -30,7 +30,7 @@ def test_100_percent_integrity_handshake(tmp_path):
     log_path = tmp_path / "audit.json"
     
     # Process files
-    process_files(plan, tgt_dir, log_path, prefix="", suffix="")
+    process_files(plan, tgt_dir, log_path)
     
     # Check that file was moved into the correct folder
     target_file = tgt_dir / "03-2024" / "photo.jpg"
@@ -63,7 +63,7 @@ def test_collision_handling(tmp_path):
     
     plan = {"04-2024": [f]}
     log_path = tmp_path / "audit.json"
-    process_files(plan, tgt_dir, log_path, "", "")
+    process_files(plan, tgt_dir, log_path)
     
     # Check that it got renamed
     assert (dest_dir / "img_1.jpg").exists(), "Collision not handled with sequence number"
@@ -85,8 +85,24 @@ def test_deduplication(tmp_path):
     
     plan = {"05-2024": [f]}
     log_path = tmp_path / "audit.json"
-    process_files(plan, tgt_dir, log_path, "", "")
+    process_files(plan, tgt_dir, log_path)
     
     # Check that it went into duplicates folder
     dup_dir = dest_dir / "duplicates"
     assert (dup_dir / "img2.jpg").exists(), "Duplicate not moved to duplicates directory"
+
+def test_smart_nested_pathing(tmp_path):
+    src_dir = tmp_path / "src2"
+    src_dir.mkdir()
+    tgt_dir = tmp_path / "11-2021"
+    tgt_dir.mkdir()
+    
+    f = src_dir / "photo.jpg"
+    f.write_text("data")
+    
+    plan = {"11-2021": [f]}
+    log_path = tmp_path / "audit.json"
+    process_files(plan, tgt_dir, log_path)
+    
+    assert (tgt_dir / "photo.jpg").exists(), "Smart pathing failed, file not in root."
+    assert not (tgt_dir / "11-2021").exists(), "Double nested directory was erroneously created"
