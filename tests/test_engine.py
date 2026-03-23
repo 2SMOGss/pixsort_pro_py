@@ -43,3 +43,50 @@ def test_100_percent_integrity_handshake(tmp_path):
     with open(log_path, "r") as lf:
         audit = json.load(lf)
         assert audit[0]["status"] == "VERIFIED", "Status should be VERIFIED"
+
+def test_collision_handling(tmp_path):
+    # Test collision: same name, different hash
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    tgt_dir = tmp_path / "tgt"
+    tgt_dir.mkdir()
+    
+    # Pre-existing file in target
+    dest_dir = tgt_dir / "04-2024"
+    dest_dir.mkdir(parents=True)
+    existing_file = dest_dir / "img.jpg"
+    existing_file.write_text("old data")
+    
+    # New file in source
+    f = src_dir / "img.jpg"
+    f.write_text("new data")
+    
+    plan = {"04-2024": [f]}
+    log_path = tmp_path / "audit.json"
+    process_files(plan, tgt_dir, log_path, "", "")
+    
+    # Check that it got renamed
+    assert (dest_dir / "img_1.jpg").exists(), "Collision not handled with sequence number"
+
+def test_deduplication(tmp_path):
+    # Test duplication: same hash
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    tgt_dir = tmp_path / "tgt"
+    tgt_dir.mkdir()
+    
+    dest_dir = tgt_dir / "05-2024"
+    dest_dir.mkdir(parents=True)
+    existing_file = dest_dir / "img.jpg"
+    existing_file.write_text("duplicate data")
+    
+    f = src_dir / "img2.jpg"
+    f.write_text("duplicate data")
+    
+    plan = {"05-2024": [f]}
+    log_path = tmp_path / "audit.json"
+    process_files(plan, tgt_dir, log_path, "", "")
+    
+    # Check that it went into duplicates folder
+    dup_dir = dest_dir / "duplicates"
+    assert (dup_dir / "img2.jpg").exists(), "Duplicate not moved to duplicates directory"
