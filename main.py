@@ -1,11 +1,25 @@
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
+import exifread
 import security, vault, engine, interface
 VERSION = "13.0"
 EXT = {".jpg", ".png", ".mp4", ".mov", ".heic", ".jpeg"}
 VAULT_DIR = Path("./.pixsort_vault"); VAULT_DIR.mkdir(exist_ok=True)
 guard = security.VaultSecurity(VAULT_DIR)
+
+def get_file_metadata(filepath: Path) -> str:
+    try:
+        with open(filepath, 'rb') as f:
+            tags = exifread.process_file(f, details=False, stop_tag='EXIF DateTimeOriginal')
+            if 'EXIF DateTimeOriginal' in tags:
+                date_str = str(tags['EXIF DateTimeOriginal'])
+                date_obj = datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+                return date_obj.strftime("%m-%Y")
+    except Exception:
+        pass
+    return datetime.fromtimestamp(filepath.stat().st_ctime).strftime("%m-%Y")
+
 def start():
     guard.setup()
     while True:
@@ -16,7 +30,7 @@ def start():
             src, tgt = Path(input("Source: ").strip()), Path(input("Target: ").strip())
             files = [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in EXT]
             plan = defaultdict(list)
-            for f in files: plan[datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m")].append(f)
+            for f in files: plan[get_file_metadata(f)].append(f)
             print(f"\nPlan: {len(files)} files."); ren = input("Rename? [n/p/s]: ").lower()
             pre = input("Prefix: ") if ren == "p" else ""; sfx = input("Suffix: ") if ren == "s" else ""
             if input("Approve? [y/n]: ").lower() == "y":
